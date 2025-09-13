@@ -69,35 +69,26 @@ export const storage = {
     }
   },
 
-  getPassengers: (): Passenger[] => {
-    // Try IndexedDB first, fallback to localStorage
-    indexedDBService.getPassengers().then(passengers => {
-      if (passengers.length > 0) {
-        // No need to update localStorage as backup since it might exceed quota
-      }
-    }).catch(error => {
-      console.error('Failed to get passengers from IndexedDB:', error);
-      // Fallback to localStorage if IndexedDB fails
-    });
-    
-    const data = localStorage.getItem(STORAGE_KEYS.PASSENGERS);
-    return data ? JSON.parse(data) : [];
+  getPassengers: (): Promise<Passenger[]> => {
+    // Always get from IndexedDB as the source of truth
+    return indexedDBService.getPassengers();
   },
   
   savePassengers: async (passengers: Passenger[]) => {
     try {
-      // Try to save to localStorage first (might fail due to quota)
-      try {
-        localStorage.setItem(STORAGE_KEYS.PASSENGERS, JSON.stringify(passengers));
-      } catch (error) {
-        console.warn('Failed to save passengers to localStorage (quota exceeded). Using IndexedDB only.');
-      }
-      
       // Always save to IndexedDB
       await indexedDBService.savePassengers(passengers);
+      
+      // Optionally, keep a small, manageable subset in localStorage for quick access if needed,
+      // but for now, we'll rely on IndexedDB to avoid quota issues.
+      // To prevent future issues, we can clear the old localStorage data.
+      if (localStorage.getItem(STORAGE_KEYS.PASSENGERS)) {
+        localStorage.removeItem(STORAGE_KEYS.PASSENGERS);
+      }
+
     } catch (error) {
       console.error('Failed to save passengers:', error);
-      throw new Error('No se pudieron guardar los pasajeros. El almacenamiento está lleno.');
+      throw new Error('No se pudieron guardar los pasajeros. El almacenamiento está lleno o hay un problema con la base de datos.');
     }
   },
 

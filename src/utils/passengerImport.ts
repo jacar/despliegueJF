@@ -8,15 +8,16 @@ import { generateQRCode, QRData } from './qr';
  * Procesa los datos de pasajeros importados desde un archivo CSV/Excel
  */
 export const processPassengersFromImport = async (data: any[]): Promise<Passenger[]> => {
-  const existingPassengers = storage.getPassengers();
-  const existingCedulas = new Set(existingPassengers.map(p => p.cedula));
+  const existingPassengers = await storage.getPassengers();
+  const existingCedulas = new Set(existingPassengers.map((p: Passenger) => p.cedula));
   const newPassengers: Passenger[] = [];
   
   // Procesar cada fila de datos
   for (const row of data) {
     // Extraer datos de las columnas (ajustar según el formato esperado)
     const name = row['Nombres y Apellidos'] || row['Nombre'] || row['nombre'] || row['NOMBRE'] || row['Name'] || row['name'] || '';
-    const cedula = row['Cedula'] || row['cedula'] || row['CEDULA'] || row['ID'] || row['id'] || '';
+    const cedulaValue = row['Cedula'] || row['cedula'] || row['CEDULA'] || row['ID'] || row['id'];
+    const cedula = cedulaValue ? String(cedulaValue).trim() : '';
     const gerencia = row['Gerencia'] || row['gerencia'] || row['GERENCIA'] || row['Department'] || row['department'] || '';
     
     // Validar datos mínimos requeridos
@@ -66,12 +67,11 @@ export const processPassengersFromImport = async (data: any[]): Promise<Passenge
  */
 export const saveImportedPassengers = async (newPassengers: Passenger[]): Promise<number> => {
   if (newPassengers.length === 0) return 0;
-  
-  const existingPassengers = storage.getPassengers();
-  const updatedPassengers = [...existingPassengers, ...newPassengers];
-  
+
   try {
-    await storage.savePassengers(updatedPassengers);
+    // Directly save only the new passengers to IndexedDB.
+    // The `savePassengers` function uses `put`, which adds new records or updates existing ones.
+    await storage.savePassengers(newPassengers);
     return newPassengers.length;
   } catch (error) {
     console.error('Error al guardar pasajeros importados:', error);
@@ -157,4 +157,54 @@ export const importPassengersFromFile = async (file: File): Promise<number> => {
     
     reader.readAsBinaryString(file);
   });
+};
+
+/**
+ * Importa pasajeros desde una URL de Google Sheet (formato CSV)
+ */
+export const importPassengersFromGoogleSheet = async (sheetUrl: string): Promise<number> => {
+  try {
+    // Extraer el ID de la hoja de cálculo de la URL
+    const sheetId = sheetUrl.match(/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)?.[1];
+    if (!sheetId) {
+      throw new Error('URL de Google Sheet no válida');
+    }
+
+    // Construir la URL de exportación CSV
+    const exportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+
+    // Obtener los datos de la hoja de cálculo
+    const response = await fetch(exportUrl);
+    if (!response.ok) {
+      throw new Error('No se pudo obtener la hoja de cálculo');
+    }
+    const csvData = await response.text();
+
+    // Parsear el CSV con XLSX
+    const workbook = XLSX.read(csvData, { type: 'string' });
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+    if (jsonData.length === 0) {
+      throw new Error('La hoja de cálculo no contiene datos');
+    }
+
+    // Procesar los datos
+    const newPassengers = await processPassengersFromImport(jsonData);
+
+    if (newPassengers.length === 0) {
+      throw new Error('No se pudieron procesar pasajeros de la hoja de cálculo. Verifique que los datos sean válidos y no estén duplicados.');
+    }
+
+    // Guardar los pasajeros
+    const savedCount = await saveImportedPassengers(newPassengers);
+    return savedCount;
+  } catch (error) {
+    console.error('Error al importar desde Google Sheet:', error);
+    if (error instanceof Error) {
+        throw new Error(`Error al importar: ${error.message}`);
+    }
+    throw new Error('Ocurrió un error desconocido durante la importación.');
+  }
 };

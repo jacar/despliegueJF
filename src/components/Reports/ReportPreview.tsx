@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Download, FileText, Camera } from 'lucide-react';
+import { X, Download, FileText, Share2 } from 'lucide-react';
 import { Trip, Passenger, Conductor, Signature } from '../../types';
 import { storage } from '../../utils/storage';
 import { format } from 'date-fns';
@@ -35,7 +35,6 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({
   const [signatures, setSignatures] = useState<Signature[]>([]);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
-  const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const [reportData, setReportData] = useState({
     conductor: '',
@@ -115,30 +114,37 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({
   const shareViaWhatsApp = async () => {
     setIsSharing(true);
     try {
-      const pdfBlob = await downloadPDFStructured(true); // Generate PDF as blob
-      if (pdfBlob && navigator.share) {
-        const pdfFile = new File([pdfBlob], `reporte-viaje.pdf`, { type: 'application/pdf' });
+      const pdfBlob = await downloadPDFStructured(true); // Generar PDF como blob
+      if (!pdfBlob) {
+        throw new Error('No se pudo generar el PDF.');
+      }
+
+      const pdfFile = new File([pdfBlob], `reporte_${reportData.conductor}.pdf`, { type: 'application/pdf' });
+
+      // Intentar usar la API nativa para compartir (ideal para móviles)
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
         await navigator.share({
           files: [pdfFile],
           title: 'Reporte de Viaje',
           text: `Reporte de viaje para ${reportData.conductor}`,
         });
       } else {
-        alert('La función de compartir no está disponible en este navegador o el PDF no pudo ser generado.');
+        // Método alternativo para navegadores de escritorio o no compatibles
+        alert('El PDF se descargará. Por favor, adjúntalo manualmente en WhatsApp.');
+        await downloadPDFStructured(); // Descargar el archivo
+        const text = encodeURIComponent(`Hola, te envío el reporte de viaje para ${reportData.conductor}.`);
+        window.open(`https://wa.me/?text=${text}`, '_blank');
       }
     } catch (error) {
       console.error("Error al compartir por WhatsApp:", error);
-      alert('Hubo un error al intentar compartir el reporte.');
+      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+        alert('Hubo un error al intentar compartir el reporte.');
+      }
     } finally {
       setIsSharing(false);
     }
   };
 
-  const downloadPDFFromHTML = async () => {
-    // Deprecated in favor of programmatic PDF to avoid blank renders
-    return downloadPDFStructured();
-  };
-    
   const downloadPDFStructured = async (returnAsBlob = false) => {
     setIsGeneratingPDF(true);
     try {
@@ -446,119 +452,6 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({
     }
   };
 
-  const captureScreenshot = async () => {
-    setIsCapturingScreenshot(true);
-    try {
-      if (!reportRef.current) {
-        alert('No se pudo capturar la pantalla');
-        return;
-      }
-
-      // Crear un contenedor temporal para clonar el reporte
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '0';
-      tempContainer.style.width = reportRef.current.offsetWidth + 'px';
-      tempContainer.style.backgroundColor = 'white';
-      document.body.appendChild(tempContainer);
-
-      // Clonar el elemento del reporte
-      const clonedElement = reportRef.current.cloneNode(true) as HTMLElement;
-      
-      // Copiar todos los estilos computados
-      const computedStyles = window.getComputedStyle(reportRef.current);
-      Array.from(computedStyles).forEach(prop => {
-        clonedElement.style.setProperty(prop, computedStyles.getPropertyValue(prop), computedStyles.getPropertyPriority(prop));
-      });
-
-      // Aplicar estilos específicos para la captura
-      clonedElement.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-      clonedElement.style.setProperty('color', '#000', 'important');
-      clonedElement.style.setProperty('background-color', 'white', 'important');
-      clonedElement.style.setProperty('border', '1px solid #000', 'important');
-      clonedElement.style.setProperty('padding', '20px', 'important');
-      clonedElement.style.setProperty('box-sizing', 'border-box', 'important');
-
-      tempContainer.appendChild(clonedElement);
-
-      // Esperar a que las imágenes se carguen
-      const images = clonedElement.querySelectorAll('img');
-      await Promise.all(Array.from(images).map(img => {
-        return new Promise<void>((resolve) => {
-          if (img.complete) {
-            resolve();
-          } else {
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-            // Timeout de seguridad
-            setTimeout(() => resolve(), 3000);
-          }
-        });
-      }));
-
-      // Capturar con html2canvas
-      const canvas = await html2canvas(tempContainer, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        foreignObjectRendering: true,
-        imageTimeout: 10000,
-        onclone: (clonedDoc) => {
-          // Aplicar estilos al documento clonado
-          const style = clonedDoc.createElement('style');
-          style.textContent = `
-            * { 
-              font-family: Arial, sans-serif !important; 
-              color: #000 !important; 
-              background-color: white !important;
-            }
-            .reporte-content { 
-              font-family: Arial, sans-serif !important; 
-              color: #111 !important; 
-              font-size: 13px !important;
-              line-height: 1.4 !important;
-            }
-            .reporte-table th, .reporte-table td { 
-              border: 1px solid #000 !important; 
-              padding: 6px !important; 
-              font-size: 13px !important; 
-              vertical-align: top !important;
-            }
-            .reporte-input, .reporte-textarea { 
-              border: 1px solid #000 !important; 
-              font-family: inherit !important; 
-              font-size: 13px !important; 
-              padding: 4px !important; 
-              box-sizing: border-box !important;
-              background: white !important;
-            }
-          `;
-          clonedDoc.head.appendChild(style);
-        }
-      });
-
-      // Verificar que el canvas no esté vacío
-      if (canvas.width === 0 || canvas.height === 0) {
-        throw new Error('Canvas vacío');
-      }
-
-      // Convertir a imagen y descargar
-      const link = document.createElement('a');
-      link.download = `Captura_Reporte_${format(new Date(), 'ddMMyyyy_HHmm')}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-
-      // Limpiar
-      document.body.removeChild(tempContainer);
-    } catch (error) {
-      console.error('Error capturando pantalla:', error);
-      alert('No se pudo capturar la pantalla del reporte');
-    } finally {
-      setIsCapturingScreenshot(false);
-    }
-  };
 
   const contratistaSignature = signatures.find(s => s.type === 'contratista');
   const corporacionSignature = signatures.find(s => s.type === 'corporacion');
@@ -589,12 +482,18 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({
             <FileText className="h-6 w-6 text-primary-600" />
             <h2 className="text-xl font-bold text-gray-900">Vista Previa del Reporte</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X className="h-6 w-6 text-gray-500" />
-          </button>
+          <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50">
+            <div className="flex space-x-3">
+              <button
+                onClick={downloadPDFStructured}
+                disabled={isGeneratingPDF}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                <Download className="h-5 w-5" />
+                <span>{isGeneratingPDF ? 'Generando...' : 'Descargar PDF'}</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Contenido del reporte */}
@@ -888,7 +787,7 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({
                 <tbody>
                   {passengerRows && passengerRows.map((row, index) => (
                     <tr key={index}>
-                      <td><input type="text" className="reporte-input" value={row.name} onChange={(e) => handlePassengerRowChange(index, 'name', e.target.value)} /></td>
+                      <td><input type="text" className="reporte-input" value={row.nombre} onChange={(e) => handlePassengerRowChange(index, 'nombre', e.target.value)} /></td>
                       <td><input type="text" className="reporte-input" value={row.cedula} onChange={(e) => handlePassengerRowChange(index, 'cedula', e.target.value)} /></td>
                       <td><input type="text" className="reporte-input" value={row.gerencia} onChange={(e) => handlePassengerRowChange(index, 'gerencia', e.target.value)} /></td>
                       <td><input type="text" className="reporte-input" value={row.ruta} onChange={(e) => handlePassengerRowChange(index, 'ruta', e.target.value)} /></td>
@@ -934,48 +833,15 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({
               >
                 Cerrar
               </button>
-              
-              {mode === 'preview' && (
-                <>
-                  {isSingleConductorReport ? (
-                    <button
-                      onClick={shareViaWhatsApp}
-                      disabled={isSharing}
-                      className="flex items-center justify-center space-x-2 bg-gradient-to-r from-green-500 to-green-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                    >
-                      <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
-                      <span className="text-sm sm:text-base">{isSharing ? 'Compartiendo...' : 'Compartir por WhatsApp'}</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={captureScreenshot}
-                      disabled={isCapturingScreenshot}
-                      className="flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 sm:px-6 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                    >
-                      <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
-                      <span className="text-sm sm:text-base">{isCapturingScreenshot ? 'Capturando...' : 'Capturar Pantalla'}</span>
-                    </button>
-                  )}
-                  <button
-                    onClick={() => downloadPDFStructured(false)}
-                    disabled={isGeneratingPDF}
-                    className="flex items-center justify-center space-x-2 bg-gradient-to-r from-red-600 to-red-700 text-white px-4 sm:px-6 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                  >
-                    <Download className="h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="text-sm sm:text-base">{isGeneratingPDF ? 'Generando PDF...' : 'Descargar PDF'}</span>
-                  </button>
-                </>
-              )}
-              
-              {mode === 'pdf' && (
-              <button
-                onClick={downloadPDFFromHTML}
-                disabled={isGeneratingPDF}
-                  className="flex items-center justify-center space-x-2 bg-gradient-to-r from-red-600 to-red-700 text-white px-4 sm:px-6 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-              >
-                  <Download className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span className="text-sm sm:text-base">{isGeneratingPDF ? 'Generando PDF...' : 'Descargar PDF'}</span>
-              </button>
+              {isSingleConductorReport && (
+                <button
+                  onClick={shareViaWhatsApp}
+                  disabled={isSharing}
+                  className="flex items-center justify-center space-x-2 bg-gradient-to-r from-green-500 to-green-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                >
+                  <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="text-sm sm:text-base">{isSharing ? 'Compartiendo...' : 'Compartir por WhatsApp'}</span>
+                </button>
               )}
             </div>
           </div>

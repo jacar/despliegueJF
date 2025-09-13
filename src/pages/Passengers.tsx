@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { applySEO } from '../utils/seo';
-import { Plus, Search, QrCode, Download, Edit, Trash2, Upload } from 'lucide-react';
+import { Plus, Search, QrCode, Download, Edit, Trash2, Upload, RefreshCw } from 'lucide-react';
 import { Passenger } from '../types';
 import { storage } from '../utils/storage';
 import { generateQRCode, QRData } from '../utils/qr';
 import QRViewer from '../components/QRViewer/QRViewer';
+import { importPassengersFromGoogleSheet } from '../utils/passengerImport';
 import PassengerCSVImport from '../components/ExcelImport/PassengerCSVImport';
 
 const Passengers: React.FC = () => {
@@ -14,6 +15,9 @@ const Passengers: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showQRViewer, setShowQRViewer] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showGoogleSheetImport, setShowGoogleSheetImport] = useState(false);
+  const [googleSheetUrl, setGoogleSheetUrl] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
   const [selectedPassenger, setSelectedPassenger] = useState<Passenger | null>(null);
   const [editingPassenger, setEditingPassenger] = useState<Passenger | null>(null);
   const [formData, setFormData] = useState({
@@ -36,9 +40,14 @@ const Passengers: React.FC = () => {
     filterPassengers();
   }, [passengers, searchTerm]);
 
-  const loadPassengers = () => {
-    const data = storage.getPassengers();
-    setPassengers(data);
+  const loadPassengers = async () => {
+    try {
+      const data = await storage.getPassengers();
+      setPassengers(data);
+    } catch (error) {
+      console.error('Error al cargar pasajeros:', error);
+      // Opcional: mostrar un mensaje de error al usuario
+    }
   };
 
   const filterPassengers = () => {
@@ -47,7 +56,7 @@ const Passengers: React.FC = () => {
     } else {
       const filtered = passengers.filter(p => 
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.cedula.includes(searchTerm) ||
+        String(p.cedula).includes(searchTerm) ||
         p.gerencia.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredPassengers(filtered);
@@ -171,11 +180,51 @@ const Passengers: React.FC = () => {
     console.error('Error al importar:', error);
   };
 
+  const handleClearPassengers = async () => {
+    if (window.confirm('¿Está seguro de que desea eliminar TODOS los pasajeros? Esta acción no se puede deshacer.')) {
+        try {
+            await storage.savePassengers([]); // Save an empty array
+            await loadPassengers(); // Reload the now-empty list
+            alert('Todos los pasajeros han sido eliminados.');
+        } catch (error) {
+            alert('Hubo un error al eliminar los pasajeros.');
+            console.error(error);
+        }
+    }
+  };
+
+  const handleGoogleSheetImport = async () => {
+    if (!googleSheetUrl) {
+      alert('Por favor, ingrese la URL de la hoja de cálculo');
+      return;
+    }
+    setIsImporting(true);
+    try {
+      const count = await importPassengersFromGoogleSheet(googleSheetUrl);
+      handleImportSuccess(count);
+      setShowGoogleSheetImport(false);
+      setGoogleSheetUrl('');
+    } catch (error) {
+      if (error instanceof Error) {
+          alert(`Error al importar: ${error.message}`);
+      } else {
+          alert('Ocurrió un error desconocido al importar.');
+      }
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestión de Pasajeros</h1>
+          <div className="flex items-center space-x-4">
+            <h1 className="text-2xl font-bold text-gray-900">Gestión de Pasajeros</h1>
+            <span className="text-sm font-medium bg-gray-200 text-gray-700 px-2.5 py-1 rounded-full">
+              {filteredPassengers.length} de {passengers.length} pasajeros
+            </span>
+          </div>
           <p className="text-gray-600">Administre los pasajeros del sistema</p>
         </div>
         <div className="flex space-x-2">
@@ -185,6 +234,20 @@ const Passengers: React.FC = () => {
           >
             <Upload className="h-5 w-5" />
             <span>Importar CSV</span>
+          </button>
+          <button
+            onClick={() => setShowGoogleSheetImport(true)}
+            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Upload className="h-5 w-5" />
+            <span>Importar Google Sheet</span>
+          </button>
+          <button
+            onClick={handleClearPassengers}
+            className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <Trash2 className="h-5 w-5" />
+            <span>Limpiar Pasajeros</span>
           </button>
           <button
             onClick={() => setShowModal(true)}
@@ -260,6 +323,13 @@ const Passengers: React.FC = () => {
                       title="Descargar QR"
                     >
                       <Download className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => regenerateQR(passenger)}
+                      className="text-teal-600 hover:text-teal-800 transition-colors"
+                      title="Regenerar QR"
+                    >
+                      <RefreshCw className="h-5 w-5" />
                     </button>
                     <button
                       onClick={() => handleEdit(passenger)}
@@ -368,10 +438,44 @@ const Passengers: React.FC = () => {
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
             <h2 className="text-xl font-bold mb-4">Importar Pasajeros desde CSV/Excel</h2>
             <PassengerCSVImport
-              onSuccess={handleImportSuccess}
-              onError={handleImportError}
-              onClose={() => setShowImportModal(false)}
+              onImportSuccess={handleImportSuccess}
+              onImportError={handleImportError}
+              onComplete={() => setShowImportModal(false)}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Google Sheet Import Modal */}
+      {showGoogleSheetImport && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <h2 className="text-xl font-bold mb-4">Importar desde Google Sheet</h2>
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Pegue la URL de la hoja de cálculo de Google"
+                value={googleSheetUrl}
+                onChange={(e) => setGoogleSheetUrl(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <div className="flex justify-end space-x-2">
+                <button
+                  onClick={() => setShowGoogleSheetImport(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={isImporting}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleGoogleSheetImport}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400"
+                  disabled={isImporting}
+                >
+                  {isImporting ? 'Importando...' : 'Importar'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Download, Filter, Calendar, FileSignature, Eye } from 'lucide-react';
 import { applySEO } from '../utils/seo';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subDays, addDays, startOfDay, endOfDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, subDays, startOfDay, endOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { storage } from '../utils/storage';
-import { generateOfficialPDFReport, generateCustomExcelReport, generateDetailedExcelReport } from '../utils/reports';
+import { generateCustomExcelReport } from '../utils/reports';
 import { Trip, Passenger, Conductor } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import ReportPreview from '../components/Reports/ReportPreview';
@@ -42,11 +42,11 @@ const Reports: React.FC = () => {
     filterTrips();
   }, [trips, dateRange, customStartDate, customEndDate, selectedConductor]);
 
-  const loadData = () => {
+  const loadData = async () => {
     console.log('loadData called');
     const allTrips = storage.getTrips();
     console.log('All trips from storage:', allTrips);
-    
+
     // Si es conductor, solo mostrar sus propios viajes
     if (user?.role === 'conductor') {
       const conductorTrips = allTrips.filter(trip => trip.conductorId === user.id);
@@ -56,8 +56,15 @@ const Reports: React.FC = () => {
       // Admin y root ven todos los viajes
       setTrips(allTrips);
     }
+
+    try {
+      const passengerData = await storage.getPassengers();
+      setPassengers(passengerData);
+    } catch (error) {
+      console.error("Error loading passengers for reports:", error);
+      setPassengers([]); // En caso de error, establecer como un array vacío
+    }
     
-    setPassengers(storage.getPassengers());
     setConductors(storage.getConductors());
   };
 
@@ -145,6 +152,7 @@ const Reports: React.FC = () => {
   };
 
   const downloadPDF = () => {
+    // Mostrar la vista previa en modo PDF para que el usuario pueda descargar y luego compartir
     setShowPreviewForPDF(true);
   };
 
@@ -152,23 +160,9 @@ const Reports: React.FC = () => {
     generateCustomExcelReport(filteredTrips, passengers, conductors, getDateRangeLabel());
   };
 
-  const downloadDetailedExcel = () => {
-    generateDetailedExcelReport(filteredTrips, passengers, conductors, getDateRangeLabel());
-  };
-  
-
-  const [showPreviewForScreenshot, setShowPreviewForScreenshot] = useState(false);
-
   const shareWhatsApp = () => {
-    const params = new URLSearchParams(location.search);
-    const groupId = params.get('groupId');
-    const baseUrl = window.location.origin;
-    const link = groupId ? `${baseUrl}/reports?groupId=${groupId}` : `${baseUrl}/reports`;
-    const total = filteredTrips.length;
-    const text = encodeURIComponent(
-      `Reporte de transporte JF (${getDateRangeLabel()}) - Viajes: ${total}. Ver reporte: ${link}`
-    );
-    window.open(`https://wa.me/?text=${text}`, '_blank');
+    // Mostrar la vista previa en modo PDF para que el usuario pueda descargar y luego compartir
+    setShowPreviewForPDF(true);
   };
 
   const shareSingleTripWhatsApp = (trip: Trip) => {

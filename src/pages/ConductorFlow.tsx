@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { QrCode, User, CheckCircle, Users, Clock, ArrowRight, ArrowLeft, Plus, FileText } from 'lucide-react';
+import { QrCode, User, CheckCircle, ArrowRight, ArrowLeft, Plus, FileText } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { storage } from '../utils/storage';
 import { parseQRData } from '../utils/qr';
@@ -38,18 +38,23 @@ const ConductorFlow: React.FC = () => {
       canonicalPath: '/conductor-flow',
     });
     loadData();
-  }, []);
+  }, [user]); // Recargar si el usuario cambia
 
-  const loadData = () => {
+  const loadData = async () => {
     const allConductors = storage.getConductors();
     setConductors(allConductors);
-    setPassengers(storage.getPassengers());
+    try {
+      const passengerData = await storage.getPassengers();
+      setPassengers(passengerData);
 
-    // Si el usuario es conductor, fijar su propio perfil y saltar selección
-    if (user?.role === 'conductor') {
-      const own = allConductors.find(c => c.id === user.id || c.cedula === user.cedula) || null;
-      setSelectedConductor(own);
-      setCurrentStep('identify');
+      // Si el usuario es conductor, fijar su propio perfil y saltar selección
+      if (user?.role === 'conductor') {
+        const own = allConductors.find(c => c.id === user.id || c.cedula === user.cedula) || null;
+        setSelectedConductor(own);
+        setCurrentStep('identify');
+      }
+    } catch (error) {
+      console.error("Error loading passengers in conductor flow:", error);
     }
   };
 
@@ -61,7 +66,7 @@ const ConductorFlow: React.FC = () => {
   const handleQRScan = (qrData: string) => {
     try {
       const parsedData = parseQRData(qrData);
-      const passenger = passengers.find(p => p.cedula === parsedData.cedula);
+      const passenger = passengers.find(p => String(p.cedula) === String(parsedData.cedula));
       
       if (!passenger) {
         alert(`Pasajero con cédula ${parsedData.cedula} no encontrado en el sistema`);
@@ -87,7 +92,7 @@ const ConductorFlow: React.FC = () => {
       return;
     }
 
-    const passenger = passengers.find(p => p.cedula === manualCedula.trim());
+    const passenger = passengers.find(p => String(p.cedula) === manualCedula.trim());
     
     if (!passenger) {
       alert(`Pasajero con cédula ${manualCedula.trim()} no encontrado en el sistema`);
