@@ -1,11 +1,11 @@
 // Configuración de la hoja de cálculo
-const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SHEETS_SPREADSHEET_ID || '1aSItYDKmf2YpzJClK8tKnmpcmmFbKlP90hrQDIjJyqo';
+const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SHEETS_SPREADSHEET_ID;
 const SHEET_NAME = 'Pasajeros';
 
 // Configuración de OAuth 2.0
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '548233310596-900v87vmup30in0g1n22kcd0fovjkv89.apps.googleusercontent.com';
-const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY || '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';
-const REDIRECT_URI = import.meta.env.VITE_GOOGLE_REDIRECT_URI || 'http://localhost:5173/passengers';
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY;
+const REDIRECT_URI = import.meta.env.VITE_GOOGLE_REDIRECT_URI;
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 
 declare global {
