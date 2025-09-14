@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { applySEO } from '../utils/seo';
-import { Plus, Search, QrCode, Download, Edit, Trash2, Upload, RefreshCw } from 'lucide-react';
+import { Plus, Search, QrCode, Edit, Trash2, RefreshCw } from 'lucide-react';
 import { Passenger } from '../types';
 import { storage } from '../utils/storage';
 import { generateQRCode, QRData } from '../utils/qr';
 import QRViewer from '../components/QRViewer/QRViewer';
-import { importPassengersFromGoogleSheet } from '../utils/passengerImport';
-import PassengerCSVImport from '../components/ExcelImport/PassengerCSVImport';
+import { sheetsApiService } from '../services/sheetsApiService';
+import GoogleAuth from '../components/Auth/GoogleAuth';
 
 const Passengers: React.FC = () => {
   const [passengers, setPassengers] = useState<Passenger[]>([]);
@@ -14,12 +14,14 @@ const Passengers: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showQRViewer, setShowQRViewer] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [showGoogleSheetImport, setShowGoogleSheetImport] = useState(false);
-  const [googleSheetUrl, setGoogleSheetUrl] = useState('');
-  const [isImporting, setIsImporting] = useState(false);
+
   const [selectedPassenger, setSelectedPassenger] = useState<Passenger | null>(null);
   const [editingPassenger, setEditingPassenger] = useState<Passenger | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     cedula: '',
@@ -33,34 +35,136 @@ const Passengers: React.FC = () => {
       keywords: 'pasajeros, cédula, QR, transporte, gestión de pasajeros',
       canonicalPath: '/passengers',
     });
-    loadPassengers();
-  }, []);
+    
+    const loadInitialData = async () => {
+      try {
+        setIsLoading(true);
+        // Cargar datos locales primero
+        const localPassengers = await storage.getPassengers();
+        setPassengers(localPassengers);
+        
+        // Intentar cargar datos remotos si estamos autenticados
+        if (isAuthenticated) {
+          try {
+            const remotePassengers = await sheetsApiService.getPassengers();
+            if (remotePassengers.length > 0) {
+              setPassengers(remotePassengers);
+              await storage.savePassengers(remotePassengers);
+            }
+          } catch (error) {
+            console.error('Error al cargar datos remotos:', error);
+            // Continuar con los datos locales si hay un error
+          }
+        }
+      } catch (error) {
+        console.error('Error al cargar pasajeros:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const checkAuth = () => {
+      const isAuth = sheetsApiService.isAuthenticated();
+      setIsAuthenticated(isAuth);
+      if (isAuth) {
+        loadInitialData();
+      }
+    };
+
+    checkAuth();
+  }, [isAuthenticated]);
 
   useEffect(() => {
     filterPassengers();
   }, [passengers, searchTerm]);
 
-  const loadPassengers = async () => {
+  const handleAuthSuccess = async (token: string) => {
     try {
-      const data = await storage.getPassengers();
-      setPassengers(data);
+      sheetsApiService.setAccessToken(token);
+      setIsAuthenticated(true);
+      setAuthError(null);
+      await loadInitialData();
     } catch (error) {
-      console.error('Error al cargar pasajeros:', error);
-      // Opcional: mostrar un mensaje de error al usuario
+      console.error('Error en la autenticación:', error);
+      setAuthError('Error al autenticar con Google. Por favor, inténtalo de nuevo.');
+    }
+  };
+
+  const handleAuthError = (error: string) => {
+    console.error('Error de autenticación:', error);
+    setAuthError(error);
+  };
+
+  const handleLogout = () => {
+    sheetsApiService.clearAccessToken();
+    setIsAuthenticated(false);
+    setPassengers([]);
+    setFilteredPassengers([]);
+  };
+
+  const handleSync = async () => {
+    try {
+      setIsSyncing(true);
+      setSyncStatus('syncing');
+      
+      // Obtener datos actualizados de la hoja de cálculo
+      const updatedPassengers = await sheetsApiService.getPassengers();
+      
+      // Actualizar el estado local
+      setPassengers(updatedPassengers);
+      setFilteredPassengers(updatedPassengers);
+      
+      // Guardar localmente
+      await storage.savePassengers(updatedPassengers);
+      
+      setSyncStatus('success');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    } catch (error) {
+      console.error('Error al sincronizar:', error);
+      setSyncStatus('error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const savePassengers = async (updatedPassengers: Passenger[]) => {
+    try {
+      // Guardar localmente
+      await storage.savePassengers(updatedPassengers);
+      
+      // Sincronizar con Google Sheets en segundo plano
+      if (updatedPassengers.length > 0) {
+        // Primero limpiar la hoja
+        // Luego agregar todos los pasajeros
+        await Promise.all(updatedPassengers.map(p => sheetsApiService.addPassenger(p)));
+      }
+      
+      return updatedPassengers;
+    } catch (error) {
+      console.error('Error al guardar pasajeros:', error);
+      throw error;
     }
   };
 
   const filterPassengers = () => {
-    if (!searchTerm) {
-      setFilteredPassengers(passengers);
-    } else {
-      const filtered = passengers.filter(p => 
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        String(p.cedula).includes(searchTerm) ||
-        p.gerencia.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredPassengers(filtered);
+    if (!Array.isArray(passengers)) {
+      setFilteredPassengers([]);
+      return;
     }
+
+    if (!searchTerm.trim()) {
+      setFilteredPassengers(passengers);
+      return;
+    }
+
+    const searchTermLower = searchTerm.toLowerCase();
+    const filtered = passengers.filter(p => 
+      (p.name?.toLowerCase().includes(searchTermLower) ||
+      p.cedula?.includes(searchTerm) ||
+      p.gerencia?.toLowerCase().includes(searchTermLower))
+    );
+    
+    setFilteredPassengers(filtered);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,7 +184,7 @@ const Passengers: React.FC = () => {
           ? { ...p, ...formData }
           : p
       );
-      storage.savePassengers(updatedPassengers);
+      await savePassengers(updatedPassengers);
       setPassengers(updatedPassengers);
     } else {
       // Create new passenger
@@ -101,7 +205,7 @@ const Passengers: React.FC = () => {
       };
       
       const updatedPassengers = [...passengers, newPassenger];
-      storage.savePassengers(updatedPassengers);
+      await savePassengers(updatedPassengers);
       setPassengers(updatedPassengers);
     }
     
@@ -125,7 +229,7 @@ const Passengers: React.FC = () => {
           : p
       );
       
-      storage.savePassengers(updatedPassengers);
+      await savePassengers(updatedPassengers);
       setPassengers(updatedPassengers);
     } catch (error) {
       alert('Error regenerando código QR');
@@ -145,8 +249,9 @@ const Passengers: React.FC = () => {
   const handleDelete = (id: string) => {
     if (window.confirm('¿Está seguro de eliminar este pasajero?')) {
       const updatedPassengers = passengers.filter(p => p.id !== id);
-      storage.savePassengers(updatedPassengers);
-      setPassengers(updatedPassengers);
+      savePassengers(updatedPassengers).then(() => {
+        setPassengers(updatedPassengers);
+      });
     }
   };
 
@@ -168,191 +273,144 @@ const Passengers: React.FC = () => {
     setShowModal(false);
   };
   
-  const handleImportSuccess = (count: number) => {
-    // Recargar los datos después de una importación exitosa
-    loadPassengers();
-    // Mostrar mensaje de éxito si es necesario
-    alert(`Se importaron ${count} pasajeros correctamente.`);
-  };
-  
-  const handleImportError = (error: string) => {
-    // Mostrar mensaje de error si es necesario
-    console.error('Error al importar:', error);
-  };
 
-  const handleClearPassengers = async () => {
-    if (window.confirm('¿Está seguro de que desea eliminar TODOS los pasajeros? Esta acción no se puede deshacer.')) {
-        try {
-            await storage.savePassengers([]); // Save an empty array
-            await loadPassengers(); // Reload the now-empty list
-            alert('Todos los pasajeros han sido eliminados.');
-        } catch (error) {
-            alert('Hubo un error al eliminar los pasajeros.');
-            console.error(error);
-        }
-    }
-  };
 
-  const handleGoogleSheetImport = async () => {
-    if (!googleSheetUrl) {
-      alert('Por favor, ingrese la URL de la hoja de cálculo');
-      return;
-    }
-    setIsImporting(true);
-    try {
-      const count = await importPassengersFromGoogleSheet(googleSheetUrl);
-      handleImportSuccess(count);
-      setShowGoogleSheetImport(false);
-      setGoogleSheetUrl('');
-    } catch (error) {
-      if (error instanceof Error) {
-          alert(`Error al importar: ${error.message}`);
-      } else {
-          alert('Ocurrió un error desconocido al importar.');
-      }
-    } finally {
-      setIsImporting(false);
-    }
-  };
+  // Asegurarnos de que filteredPassengers siempre sea un array
+  const safeFilteredPassengers = Array.isArray(filteredPassengers) ? filteredPassengers : [];
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+          <h2 className="text-2xl font-bold mb-6 text-center">Iniciar sesión</h2>
+          {authError && (
+            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+              {authError}
+            </div>
+          )}
+          <div className="flex justify-center">
+            <GoogleAuth
+              onSuccess={handleAuthSuccess}
+              onError={handleAuthError}
+              buttonText="Iniciar sesión con Google"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando pasajeros...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold text-gray-900">Gestión de Pasajeros</h1>
-            <span className="text-sm font-medium bg-gray-200 text-gray-700 px-2.5 py-1 rounded-full">
-              {filteredPassengers.length} de {passengers.length} pasajeros
-            </span>
-          </div>
-          <p className="text-gray-600">Administre los pasajeros del sistema</p>
-        </div>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            <Upload className="h-5 w-5" />
-            <span>Importar CSV</span>
-          </button>
-          <button
-            onClick={() => setShowGoogleSheetImport(true)}
-            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Upload className="h-5 w-5" />
-            <span>Importar Google Sheet</span>
-          </button>
-          <button
-            onClick={handleClearPassengers}
-            className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-          >
-            <Trash2 className="h-5 w-5" />
-            <span>Limpiar Pasajeros</span>
-          </button>
+    <div className="container mx-auto px-4 py-8">
+      {/* Barra de herramientas */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <h1 className="text-2xl font-bold">Gestión de Pasajeros</h1>
+        
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          {/* Botón de Nuevo Pasajero */}
           <button
             onClick={() => setShowModal(true)}
-            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center space-x-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
           >
             <Plus className="h-5 w-5" />
             <span>Nuevo Pasajero</span>
           </button>
         </div>
       </div>
-
-      <div className="bg-white rounded-lg shadow-md">
-        <div className="p-6 border-b border-gray-200">
-          <div className="relative">
-            <Search className="h-5 w-5 absolute left-3 top-3 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre, cédula o gerencia..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+      
+      {safeFilteredPassengers.length === 0 && !isLoading ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500">No se encontraron pasajeros.</p>
+          <button
+            onClick={() => setShowModal(true)}
+            className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <Plus className="-ml-1 mr-2 h-5 w-5" />
+            Agregar Pasajero
+          </button>
+        </div>
+      ) : (
+        <div className="mt-8">
+          <div className="flex flex-col">
+            <div className="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+              <div className="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
+                <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50 hidden md:table-header-group">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Nombre
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Cédula
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Gerencia
+                        </th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Acciones
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200 block md:table-row-group">
+                      {safeFilteredPassengers.map((passenger) => (
+                        <tr key={passenger.id} className="hover:bg-gray-50 block md:table-row">
+                          <td className="px-6 py-4 block md:table-cell">
+                            <div className="font-medium text-gray-900">{passenger.name}</div>
+                          </td>
+                          <td className="px-6 py-4 block md:table-cell text-gray-600">
+                            {passenger.cedula}
+                          </td>
+                          <td className="px-6 py-4 block md:table-cell text-gray-600">
+                            {passenger.gerencia}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex space-x-2 justify-end">
+                              <button
+                                onClick={() => viewQR(passenger)}
+                                className="text-green-600 hover:text-green-800"
+                                title="Ver QR"
+                              >
+                                <QrCode className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => handleEdit(passenger)}
+                                className="text-blue-600 hover:text-blue-800"
+                                title="Editar"
+                              >
+                                <Edit className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(passenger.id!)}
+                                className="text-red-600 hover:text-red-800"
+                                title="Eliminar"
+                              >
+                                <Trash2 className="h-5 w-5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div className="overflow-x-auto md:overflow-visible">
-          <table className="w-full table-auto md:table-fixed">
-            <thead className="bg-gray-50 hidden md:table-header-group">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Pasajero
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cédula
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Gerencia
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fecha Registro
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 block md:table-row-group">
-              {filteredPassengers.map((passenger) => (
-                <tr key={passenger.id} className="hover:bg-gray-50 block md:table-row">
-                  <td className="px-6 py-4 block md:table-cell">
-                    <div className="font-medium text-gray-900">{passenger.name}</div>
-                  </td>
-                  <td className="px-6 py-4 block md:table-cell text-gray-600">
-                    {passenger.cedula}
-                  </td>
-                  <td className="px-6 py-4 block md:table-cell text-gray-600">
-                    {passenger.gerencia}
-                  </td>
-                  <td className="px-6 py-4 block md:table-cell text-gray-600">
-                    {new Date(passenger.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-center space-x-2 block md:table-cell">
-                    <button
-                      onClick={() => viewQR(passenger)}
-                      className="text-green-600 hover:text-green-800 transition-colors"
-                      title="Ver QR"
-                    >
-                      <QrCode className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => downloadQR(passenger)}
-                      className="text-purple-600 hover:text-purple-800 transition-colors"
-                      title="Descargar QR"
-                    >
-                      <Download className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => regenerateQR(passenger)}
-                      className="text-teal-600 hover:text-teal-800 transition-colors"
-                      title="Regenerar QR"
-                    >
-                      <RefreshCw className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleEdit(passenger)}
-                      className="text-blue-600 hover:text-blue-800 transition-colors"
-                      title="Editar"
-                    >
-                      <Edit className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(passenger.id)}
-                      className="text-red-600 hover:text-red-800 transition-colors"
-                      title="Eliminar"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
+      )}
+      
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -432,53 +490,7 @@ const Passengers: React.FC = () => {
         />
       )}
 
-      {/* Import Modal */}
-      {showImportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
-            <h2 className="text-xl font-bold mb-4">Importar Pasajeros desde CSV/Excel</h2>
-            <PassengerCSVImport
-              onImportSuccess={handleImportSuccess}
-              onImportError={handleImportError}
-              onComplete={() => setShowImportModal(false)}
-            />
-          </div>
-        </div>
-      )}
 
-      {/* Google Sheet Import Modal */}
-      {showGoogleSheetImport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
-            <h2 className="text-xl font-bold mb-4">Importar desde Google Sheet</h2>
-            <div className="space-y-4">
-              <input
-                type="text"
-                placeholder="Pegue la URL de la hoja de cálculo de Google"
-                value={googleSheetUrl}
-                onChange={(e) => setGoogleSheetUrl(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <div className="flex justify-end space-x-2">
-                <button
-                  onClick={() => setShowGoogleSheetImport(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  disabled={isImporting}
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleGoogleSheetImport}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400"
-                  disabled={isImporting}
-                >
-                  {isImporting ? 'Importando...' : 'Importar'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -1,33 +1,43 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import basicSsl from '@vitejs/plugin-basic-ssl';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import { resolve } from 'path';
 
-// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), basicSsl()],
+  base: '/',
+  plugins: [
+    react(),
+    nodePolyfills({
+      protocolImports: true,
+    }),
+  ],
+  define: {
+    global: 'globalThis',
+  },
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
+    },
+  },
   optimizeDeps: {
-    exclude: ['lucide-react'],
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
+      },
+    },
   },
   build: {
     outDir: 'dist',
-    assetsDir: 'assets',
-    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom'],
-          router: ['react-router-dom'],
+          vendor: ['react', 'react-dom', 'react-router-dom'],
         },
       },
     },
   },
   server: {
-    https: true,
     port: 5173,
-    host: true,
-  },
-  preview: {
-    port: 5173,
-    host: true,
+    strictPort: true,
   },
 });

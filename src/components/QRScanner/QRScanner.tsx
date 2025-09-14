@@ -41,6 +41,23 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
             highlightScanRegion: true,
             highlightCodeOutline: true,
             maxScansPerSecond: 1, // Limitar a 1 escaneo por segundo
+            preferredCamera: 'environment', // Usar cámara trasera por defecto
+            calculateScanRegion: (video) => {
+              // Crear una región de escaneo más grande en el centro
+              const smallerDimension = Math.min(video.videoWidth, video.videoHeight);
+              const scanRegionSize = Math.round(smallerDimension * 0.7); // 70% del tamaño
+              
+              return {
+                x: Math.round((video.videoWidth - scanRegionSize) / 2),
+                y: Math.round((video.videoHeight - scanRegionSize) / 2),
+                width: scanRegionSize,
+                height: scanRegionSize,
+              };
+            },
+            highlightScanRegionCanvas: {
+              strokeStyle: '#22c55e', // Verde más visible
+              lineWidth: 4,
+            }
           }
         );
 
@@ -62,45 +79,64 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
   }, [onScan, onClose]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 md:p-8 max-w-4xl w-full mx-4">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Escanear Código QR</h3>
+    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg w-full h-full max-h-screen md:h-[95vh] md:w-[95vw] flex flex-col">
+        <div className="flex justify-between items-center p-3 bg-green-600 text-white rounded-t-lg">
+          <h3 className="text-xl font-bold flex items-center"><Camera className="h-6 w-6 mr-2" />Escanear Código QR</h3>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-1 bg-red-500 hover:bg-red-600 rounded-full transition-colors"
+            aria-label="Cerrar escáner"
           >
-            <X className="h-6 w-6 text-gray-500" />
+            <X className="h-6 w-6 text-white" />
           </button>
         </div>
 
         {error ? (
-          <div className="text-center py-8">
-            <Camera className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <p className="text-red-600 text-sm">{error}</p>
+          <div className="text-center py-8 flex-grow flex flex-col items-center justify-center">
+            <Camera className="h-20 w-20 text-gray-400 mx-auto mb-4" />
+            <p className="text-red-600 text-base">{error}</p>
             <button
               onClick={onClose}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Cerrar
             </button>
           </div>
         ) : (
-          <div className="relative">
-            <video
-              ref={videoRef}
-              className="w-full h-[60vh] md:h-[70vh] bg-gray-900 rounded-xl object-cover"
-              playsInline
-            />
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
-                {isScanning ? 'Procesando...' : 'Apunte la cámara hacia el código QR del pasajero'}
-              </p>
-              {isScanning && (
-                <div className="mt-2">
-                  <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+          <div className="relative flex-grow flex flex-col">
+            <div className="relative flex-grow">
+              <video
+                ref={videoRef}
+                className="w-full h-full bg-gray-900 object-cover"
+                playsInline
+              />
+              {/* Overlay con guía visual */}
+              <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
+                <div className="w-[250px] h-[250px] md:w-[300px] md:h-[300px] border-2 border-green-500 rounded-lg relative">
+                  {/* Esquinas del marco */}
+                  <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-green-500 rounded-tl-lg"></div>
+                  <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-green-500 rounded-tr-lg"></div>
+                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-green-500 rounded-bl-lg"></div>
+                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-green-500 rounded-br-lg"></div>
                 </div>
-              )}
+                <div className="absolute bottom-20 left-0 right-0 text-center">
+                  <p className="text-white text-lg font-bold bg-black bg-opacity-50 py-2 px-4 rounded-full inline-block">
+                    {isScanning ? 'Procesando...' : 'Centre el código QR en el marco'}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 text-center bg-white">
+              <p className="text-base text-gray-700 font-medium">
+                {isScanning ? 
+                  <span className="flex items-center justify-center">
+                    <span className="mr-2">Procesando código QR</span>
+                    <span className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></span>
+                  </span> : 
+                  'Apunte la cámara hacia el código QR del pasajero'
+                }
+              </p>
             </div>
           </div>
         )}
