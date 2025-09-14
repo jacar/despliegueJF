@@ -260,7 +260,7 @@ export const generateOfficialReport = (
       '',
       '',
       '',
-      'VERIFICADO POR CORPORACIÓN JF:',
+      'VERIFICADO POR:',
       '',
       '',
       '',
@@ -284,25 +284,12 @@ export const generateOfficialReport = (
     const corporacionSign = corporacionSignatures.length > 0 ? corporacionSignatures[0] : null;
     
     reportData.push([
-      contratistaSign ? `NOMBRE: ${contratistaSign.name}` : 'NOMBRE: ________________',
+      contratistaSign ? `NOMBRE: ${contratistaSign.name}` : 'Nombre: Patricia Chávez',
       '',
       '',
       '',
       '',
-      corporacionSign ? `NOMBRE: ${corporacionSign.name}` : 'NOMBRE: ________________',
-      '',
-      '',
-      '',
-      ''
-    ]);
-    
-    reportData.push([
-      contratistaSign ? `C.I.: ${contratistaSign.ci}` : 'C.I.: ________________',
-      '',
-      '',
-      '',
-      '',
-      corporacionSign ? `C.I.: ${corporacionSign.ci}` : 'C.I.: ________________',
+      corporacionSign ? `NOMBRE: ${corporacionSign.name}` : 'LEOBALDO MORAN',
       '',
       '',
       '',
@@ -310,12 +297,25 @@ export const generateOfficialReport = (
     ]);
     
     reportData.push([
-      contratistaSign ? `CARGO: ${contratistaSign.cargo}` : 'CARGO: ________________',
+      contratistaSign ? `C.I.: ${contratistaSign.ci}` : 'CI: 19.408.187',
       '',
       '',
       '',
       '',
-      corporacionSign ? `CARGO: ${corporacionSign.cargo}` : 'CARGO: ________________',
+      corporacionSign ? `C.I.: ${corporacionSign.ci}` : 'CI: 12.380.111',
+      '',
+      '',
+      '',
+      ''
+    ]);
+    
+    reportData.push([
+      contratistaSign ? `CARGO: ${contratistaSign.cargo}` : 'Cargo: Supervisor de transporte',
+      '',
+      '',
+      '',
+      '',
+      corporacionSign ? `CARGO: ${corporacionSign.cargo}` : 'Cargo: SUPERVISOR DE OPERACIONES',
       '',
       '',
       '',
@@ -341,7 +341,7 @@ export const generateOfficialReport = (
       '',
       '',
       '',
-      'VERIFICADO POR CORPORACIÓN JF:',
+      'VERIFICADO POR:',
       '',
       '',
       '',
@@ -349,25 +349,12 @@ export const generateOfficialReport = (
     ]);
     
     reportData.push([
-      'NOMBRE: ________________',
+      'CORPORACIÓN JF C.A.',
       '',
       '',
       '',
       '',
-      'NOMBRE: ________________',
-      '',
-      '',
-      '',
-      ''
-    ]);
-    
-    reportData.push([
-      'C.I.: ________________',
-      '',
-      '',
-      '',
-      '',
-      'C.I.: ________________',
+      'LEOBALDO MORAN',
       '',
       '',
       '',
@@ -375,12 +362,38 @@ export const generateOfficialReport = (
     ]);
     
     reportData.push([
-      'CARGO: ________________',
+      'Nombre: Patricia Chávez',
       '',
       '',
       '',
       '',
-      'CARGO: ________________',
+      'CI: 12.380.111',
+      '',
+      '',
+      '',
+      ''
+    ]);
+    
+    reportData.push([
+      'CI: 19.408.187',
+      '',
+      '',
+      '',
+      '',
+      'Cargo: SUPERVISOR DE OPERACIONES',
+      '',
+      '',
+      '',
+      ''
+    ]);
+    
+    reportData.push([
+      'Cargo: Supervisor de transporte',
+      '',
+      '',
+      '',
+      '',
+      '',
       '',
       '',
       '',

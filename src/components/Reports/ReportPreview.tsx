@@ -119,26 +119,64 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({
         throw new Error('No se pudo generar el PDF.');
       }
 
-      const pdfFile = new File([pdfBlob], `reporte_${reportData.conductor}.pdf`, { type: 'application/pdf' });
+      const pdfFile = new File([pdfBlob], `reporte_${reportData.conductor || 'viaje'}.pdf`, { type: 'application/pdf' });
+      const fileName = `reporte_${reportData.conductor || 'viaje'}.pdf`;
 
+      // Verificar si estamos en un dispositivo móvil
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
       // Intentar usar la API nativa para compartir (ideal para móviles)
-      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-        await navigator.share({
-          files: [pdfFile],
-          title: 'Reporte de Viaje',
-          text: `Reporte de viaje para ${reportData.conductor}`,
-        });
+      if (isMobile && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        console.log('Usando Web Share API para compartir archivo');
+        try {
+          await navigator.share({
+            files: [pdfFile],
+            title: 'Reporte de Viaje',
+            text: `Reporte de viaje para ${reportData.conductor || 'conductor'}`,
+          });
+          console.log('Archivo compartido exitosamente');
+          return;
+        } catch (shareError) {
+          console.error('Error al usar Web Share API:', shareError);
+          // Si falla, continuamos con el método alternativo
+        }
+      }
+      
+      // Método alternativo para navegadores de escritorio o no compatibles con Web Share API
+      console.log('Usando método alternativo para compartir');
+      
+      // 1. Guardar el PDF localmente
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      const downloadLink = document.createElement('a');
+      downloadLink.href = pdfUrl;
+      downloadLink.download = fileName;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      
+      // Pequeño retraso para asegurar que la descarga comience
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // 2. Abrir WhatsApp con mensaje predefinido
+      const text = encodeURIComponent(`Hola, te envío el reporte de viaje para ${reportData.conductor || 'conductor'}. Acabo de descargar el PDF, te lo adjunto por este medio.`);
+      
+      // En móviles, intentar abrir la app de WhatsApp
+      if (isMobile) {
+        window.location.href = `whatsapp://send?text=${text}`;
       } else {
-        // Método alternativo para navegadores de escritorio o no compatibles
-        alert('El PDF se descargará. Por favor, adjúntalo manualmente en WhatsApp.');
-        await downloadPDFStructured(); // Descargar el archivo
-        const text = encodeURIComponent(`Hola, te envío el reporte de viaje para ${reportData.conductor}.`);
+        // En desktop, abrir WhatsApp Web
         window.open(`https://wa.me/?text=${text}`, '_blank');
       }
+      
+      // 3. Limpiar recursos
+      setTimeout(() => {
+        document.body.removeChild(downloadLink);
+        URL.revokeObjectURL(pdfUrl);
+      }, 1500);
+      
     } catch (error) {
       console.error("Error al compartir por WhatsApp:", error);
       if (!(error instanceof DOMException && error.name === 'AbortError')) {
-        alert('Hubo un error al intentar compartir el reporte.');
+        alert('Hubo un error al intentar compartir el reporte. Por favor, intente nuevamente.');
       }
     } finally {
       setIsSharing(false);
@@ -146,7 +184,12 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({
   };
 
   const downloadPDFStructured = async (returnAsBlob = false) => {
+    console.log('Iniciando generación de PDF...');
     setIsGeneratingPDF(true);
+    
+    // Añadir un pequeño retraso para asegurar que el estado se actualice
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     try {
       const doc = new jsPDF('p', 'mm', 'a4');
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -415,38 +458,57 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({
       doc.setFont('helvetica', 'bold');
       doc.text('Verificado por: Contratista', margin + 2, y + 6);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Nombre: ${contratista?.name || 'LEOBALDO MORAN'}`, margin + 2, y + 12);
-      doc.text(`CI: ${contratista?.ci || '12.380.111'}`, margin + 2, y + 18);
-      doc.text(`Cargo: ${contratista?.cargo || 'SUPERVISOR DE OPERACIONES'}`, margin + 2, y + 24);
+      doc.text(`Nombre: Patricia Chávez`, margin + 2, y + 12);
+      doc.text(`CI: 19.408.187`, margin + 2, y + 18);
+      doc.text(`Cargo: SUPERVISOR DE OPERACIONES PETROBOSCAN`, margin + 2, y + 24);
 
       // Corporación box
       const rightX = margin + sigWidth + 10;
       doc.rect(rightX, y, sigWidth, sigHeight);
       doc.setFont('helvetica', 'bold');
-      doc.text('Verificado por: CORPORACIÓN JF C.A.', rightX + 2, y + 6);
+      doc.text('Verificado por:', rightX + 2, y + 6);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Nombre: ${corporacion?.name || 'Patricia Chávez'}`, rightX + 2, y + 12);
-      doc.text(`CI: ${corporacion?.ci || '19.408.187'}`, rightX + 2, y + 18);
-      doc.text(`Cargo: ${corporacion?.cargo || 'Supervisor de transporte'}`, rightX + 2, y + 24);
+      doc.text(`CORPORACIÓN JF C.A.`, rightX + 2, y + 12);
+      doc.text(`Nombre: LEOBALDO MORAN`, rightX + 2, y + 18);
+      doc.text(`CI: 12.380.111`, rightX + 2, y + 24);
+      doc.text(`Cargo: Supervisor de transporte`, rightX + 2, y + 30);
 
       const pdfBlob = doc.output('blob');
+      console.log('PDF generado correctamente:', pdfBlob);
 
       if (returnAsBlob) {
         return pdfBlob;
+      } else {
+        try {
+          // Forzar la descarga directa
+          const pdfUrl = URL.createObjectURL(pdfBlob);
+          console.log('URL del PDF creada:', pdfUrl);
+          
+          const downloadLink = document.createElement('a');
+          downloadLink.href = pdfUrl;
+          downloadLink.download = `informe-${reportData.conductor || 'reporte'}-${new Date().toISOString().split('T')[0]}.pdf`;
+          downloadLink.target = '_blank';
+          console.log('Link de descarga creado:', downloadLink);
+          
+          // Añadir al DOM, hacer clic y limpiar
+          document.body.appendChild(downloadLink);
+          console.log('Iniciando descarga...');
+          downloadLink.click();
+          
+          // Pequeño retraso antes de limpiar
+          setTimeout(() => {
+            document.body.removeChild(downloadLink);
+            URL.revokeObjectURL(pdfUrl);
+            console.log('Descarga completada y recursos liberados');
+          }, 100);
+        } catch (error) {
+          console.error('Error en la descarga del PDF:', error);
+          alert('Error al descargar el PDF. Por favor, intente nuevamente.');
+        }
       }
-
-      const downloadUrl = URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      const fileName = `reporte_${reportData.conductor}_${reportData.dia}-${reportData.mes}-${reportData.año}.pdf`;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(downloadUrl);
     } catch (error) {
       console.error("Error al generar el PDF:", error);
-      alert('Hubo un error al generar el PDF.');
+      alert('Error al generar el PDF. Por favor, intente nuevamente.');
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -482,17 +544,36 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({
             <FileText className="h-6 w-6 text-primary-600" />
             <h2 className="text-xl font-bold text-gray-900">Vista Previa del Reporte</h2>
           </div>
-          <div className="flex justify-end items-center p-6 border-t border-gray-200 bg-gray-50">
-            <div className="flex space-x-3">
-              <button
-                onClick={downloadPDFStructured}
-                disabled={isGeneratingPDF}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                <Download className="h-5 w-5" />
-                <span>{isGeneratingPDF ? 'Generando...' : 'Descargar PDF'}</span>
-              </button>
-            </div>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+        
+        {/* Barra de acciones */}
+        <div className="flex justify-end items-center p-4 border-b border-gray-200 bg-gray-50">
+          <div className="flex space-x-3">
+            <button
+              onClick={() => {
+                console.log('Botón de descarga clickeado');
+                downloadPDFStructured();
+              }}
+              disabled={isGeneratingPDF}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              <Download className="h-5 w-5" />
+              <span>{isGeneratingPDF ? 'Generando...' : 'Descargar PDF'}</span>
+            </button>
+            <button
+              onClick={shareViaWhatsApp}
+              disabled={isSharing || isGeneratingPDF}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              <Share2 className="h-5 w-5" />
+              <span>{isSharing ? 'Compartiendo...' : 'Compartir'}</span>
+            </button>
           </div>
         </div>
 

@@ -179,7 +179,17 @@ const Reports: React.FC = () => {
       `Ver historial: ${link}`
     ];
     const text = encodeURIComponent(parts.join(' | '));
-    window.open(`https://wa.me/?text=${text}`, '_blank');
+    
+    // Verificar si estamos en un dispositivo móvil
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // En móviles, intentar abrir la app de WhatsApp directamente
+    if (isMobile) {
+      window.location.href = `whatsapp://send?text=${text}`;
+    } else {
+      // En desktop, abrir WhatsApp Web
+      window.open(`https://wa.me/?text=${text}`, '_blank');
+    }
   };
 
   const handleViewTripReport = (trip: Trip) => {
