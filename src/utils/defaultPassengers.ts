@@ -1,72 +1,170 @@
 import { Passenger } from '../types';
 
 export const defaultPassengersData = [
-  { name: "LISBETH CELINA PIÑA MARIN", cedula: "13878642", gerencia: "AIT" },
-  { name: "RAMIRO SEGUNDO MONTERO DIAZ", cedula: "13002493", gerencia: "AIT" },
+  { name: "LUIS FRANCISCO GOMEZ CASADIEGO", cedula: "5851039", gerencia: "AIT" },
+  { name: "DAIVYS LUIS DIAZ ROJAS", cedula: "9717201", gerencia: "AIT" },
+  { name: "HAZEL JOSEFINA AGUILERA RODRIGUEZ", cedula: "10944635", gerencia: "AIT" },
+  { name: "JOSE ANGEL TROMPIZ MUSHART", cedula: "10967425", gerencia: "AIT" },
+  { name: "RAFAEL EMIRO CAMARGO GARCIA", cedula: "11253723", gerencia: "AIT" },
   { name: "RICHARD ALEXANDER GALIZ RIVERO", cedula: "11479380", gerencia: "AIT" },
+  { name: "YANIRA ANTONIA PEREIRA SIRIT", cedula: "11803579", gerencia: "AIT" },
+  { name: "RAMIRO SEGUNDO MONTERO DIAZ", cedula: "13002493", gerencia: "AIT" },
+  { name: "NILECTO NOE LEON SALAS", cedula: "13180609", gerencia: "AIT" },
+  { name: "LISBETH CELINA PIÑA MARIN", cedula: "13878642", gerencia: "AIT" },
+  { name: "VIRGILIO MUÑOZ MARTINS", cedula: "14893331", gerencia: "AIT" },
+  { name: "ALEXANDER JOSE REYES ARELLANES", cedula: "15162142", gerencia: "AIT" },
+  { name: "NERVIS ENRIQUE CARDOZO ANCIANI", cedula: "15553385", gerencia: "AIT" },
   { name: "MERVIN RICARDO GONZALEZ GONZALEZ", cedula: "16017790", gerencia: "AIT" },
-  { name: "DULCE MARIA OSORIO MUÑOZ", cedula: "20750117", gerencia: "OPERACIONES DE PRODUCCION" },
-  { name: "PEDRO JOSE GARCIA LOPEZ", cedula: "15748724", gerencia: "OPERACIONES DE PRODUCCION" },
-  { name: "BRUNO BARTOLO DIAZ BARRETO", cedula: "9728324", gerencia: "OPERACIONES DE PRODUCCION" },
-  { name: "NORIS BEATRIZ PEÑA AVENDAÑO", cedula: "19285320", gerencia: "OPERACIONES DE PRODUCCION" },
-  { name: "MINORLYS DE LOS ANGELES ORTEGA VILLALOBOS", cedula: "17414583", gerencia: "MANTENIMIENTO" },
-  { name: "REVILLA GIOVANNI", cedula: "7886902", gerencia: "MANTENIMIENTO" },
-  { name: "EDUARDO ERNESTO SANTRICH URQUIJO", cedula: "9722931", gerencia: "MANTENIMIENTO" },
-  { name: "JUNIOR MANUEL PACHECO FINOL", cedula: "15720360", gerencia: "MANTENIMIENTO" },
-  { name: "INGRID COROMOTO ESPINOZA MORENO", cedula: "16986555", gerencia: "SERVICIOS GENERALES" },
-  { name: "NELLY JULIO MERCADO", cedula: "11913305", gerencia: "SERVICIOS GENERALES" },
-  { name: "MILYMAR DEL VALLE GARCIA BORREGO", cedula: "15523660", gerencia: "SEGURIDAD E HIGIENE OCUPACIONAL - AMBIENTE" },
-  { name: "MARYCRUZ RAMOS DE VILCHEZ", cedula: "12714510", gerencia: "RECURSOS HUMANOS" },
-  { name: "NORBERTO RAMON VILLALOBOS INCIARTE", cedula: "7785176", gerencia: "FACILIDADES" },
-  { name: "JENNY CHIQUINQUIRA MORALES VILLALOBOS", cedula: "14833824", gerencia: "INGENIERIA DE PETROLEO" },
-  { name: "HILARION RAUL PARIS AZUAJE", cedula: "14562124", gerencia: "PLANIFICACION" },
-  { name: "ROMMEL ANTONIO WHILCHY MORALES", cedula: "6338873", gerencia: "ESTUDIOS INTEGRADOS" },
-  { name: "LEAR ACOSTA DAVID RAMON", cedula: "17187391", gerencia: "POZOS" },
-  { name: "MELISSA CAROLINA MEDINA", cedula: "14117940", gerencia: "FACILIDADES" },
-  { name: "OSCAR ALBERTO VALBUENA PERDOMO", cedula: "9748877", gerencia: "OPERACIONES DE PRODUCCION" },
-  { name: "ANGELA MARIA HERNANDEZ LUZARDO", cedula: "18063392", gerencia: "RECURSOS HUMANOS" },
-  { name: "LUIS JOSE VARGAS PEÑA", cedula: "15305967", gerencia: "INGENIERIA DE PETROLEO" },
-  { name: "FIDEL JOSE MONTILLA LEON", cedula: "23554147", gerencia: "INGENIERIA DE PETROLEO" },
-  { name: "ZULIMA PATRICIA CAICEDO DE ALVAREZ", cedula: "23554148", gerencia: "SALUD" }, // Cambié la cédula duplicada
-  { name: "ERENICE MAITHE POLANCO VARELA", cedula: "17834145", gerencia: "FINANZAS" },
-  { name: "ANGEL MIGUEL SOTO BOHORQUEZ", cedula: "20508321", gerencia: "RECURSOS HUMANOS" },
+  { name: "VERONICA ISABEL QUEVEDO FERNANDEZ", cedula: "18119712", gerencia: "AIT" },
+  { name: "EDWIN MARIANO BRACHO RIOS", cedula: "18202708", gerencia: "AIT" },
+  { name: "ANDRES JOHAN DE LA ROSA PEREZ", cedula: "18409618", gerencia: "AIT" },
+  { name: "WILLIAM MARIN MADRID", cedula: "18494991", gerencia: "AIT" },
+  { name: "JOSE GUILLERMO VILLASMIL PRIMERA", cedula: "19214501", gerencia: "AIT" },
+  { name: "ANNIAK CAROLINA RANGEL DE DIAZ", cedula: "15938957", gerencia: "AIT" },
+  { name: "ALEJANDRO JOSE ANGULO FERREIDA", cedula: "17918958", gerencia: "AIT" },
+
+  { name: "EDDY JOSE AÑEZ", cedula: "13930420", gerencia: "ASUNTOS PUBLICOS" },
+  { name: "NAIBELYN AURORA PRIETO VILLALOBOS", cedula: "14206794", gerencia: "ASUNTOS PUBLICOS" },
+  { name: "BIANCA GUADALUPE FUENMAYOR MENDOZA", cedula: "16120461", gerencia: "ASUNTOS PUBLICOS" },
+  { name: "DIBETSI ANDREINA MUÑOZ RUBIO", cedula: "19906567", gerencia: "ASUNTOS PUBLICOS" },
+  { name: "ANDREA NOEMI CHIRINO ESPINA", cedula: "22140339", gerencia: "ASUNTOS PUBLICOS" },
+
+  { name: "JOSE GREGORIO MADRIZ PAREDES", cedula: "7864550", gerencia: "CONTRATACION" },
+  { name: "MORAIMA CHIQUINQUIRA GONZALEZ AMAYA", cedula: "11283478", gerencia: "CONTRATACION" },
+  { name: "MARWILL ALBERTO MORONTA RODRIGUEZ", cedula: "13495284", gerencia: "CONTRATACION" },
+  { name: "YLIANA JOSEFINA SILVA LABARCA", cedula: "14084138", gerencia: "CONTRATACION" },
+  { name: "YASMELY DEL CARMEN CELEDON DE ENGELMANN", cedula: "14448228", gerencia: "CONTRATACION" },
+  { name: "FABIANA MENDOZA MARTINEZ", cedula: "14863952", gerencia: "CONTRATACION" },
+  { name: "DAYANA CAROLINA CHAPARRO BERNAL", cedula: "16622010", gerencia: "CONTRATACION" },
+  { name: "HASNEY COROMOTO MEDINA CARTAYA", cedula: "16755526", gerencia: "CONTRATACION" },
+  { name: "MOISES ALEJANDRO ISEA QUINTERO", cedula: "18342839", gerencia: "CONTRATACION" },
+  { name: "JESUS DANIEL MARQUEZ DIOMAIUTO", cedula: "22134565", gerencia: "CONTRATACION" },
+  { name: "FRANCIS CAROLINA GIL SANCHEZ", cedula: "23760427", gerencia: "CONTRATACION" },
   { name: "MAINERY NAVA", cedula: "23876264", gerencia: "CONTRATACION" },
-  { name: "EUDIS ALEJANDRO QUERO CHOURIO", cedula: "19341251", gerencia: "MANTENIMIENTO" },
+  { name: "NESTOR XAVIER FINOL GARCIA", cedula: "24381489", gerencia: "CONTRATACION" },
+  { name: "CARLOS ENRIQUE CANCHICA GUERRA", cedula: "26092010", gerencia: "CONTRATACION" },
+  { name: "JUAN DIEGO ARANGUREN BOHORQUEZ", cedula: "27360665", gerencia: "CONTRATACION" },
+  { name: "EMILY LABARCA", cedula: "27367704", gerencia: "CONTRATACION" },
+  { name: "JOIVAN ENRIQUE ECHEVERRIA OLIVAR", cedula: "17567119", gerencia: "CONTRATACION" },
+
+  { name: "RAMSES DE JESUS DARWICH URDANETA", cedula: "7819558", gerencia: "DSI" },
+  { name: "JORGE SEGUNDO TEJEDOR RODRIGUEZ", cedula: "7966763", gerencia: "DSI" },
+  { name: "ROBERT EZEQUIEL MENDOZA MORA", cedula: "8502909", gerencia: "DSI" },
+  { name: "MARIN ENRIQUE MOLINA MARQUEZ", cedula: "8708255", gerencia: "DSI" },
+  { name: "FILODEO CIANFAGLIONE GUILLEN", cedula: "9714324", gerencia: "DSI" },
+  { name: "ALEXANDER DANIEL RAMIREZ", cedula: "9728254", gerencia: "DSI" },
+  { name: "FRANZ REYNALDO BARRIOS", cedula: "9729881", gerencia: "DSI" },
+  { name: "ARELIS JOSEFINA MONTERO DE NUÑEZ", cedula: "9744241", gerencia: "DSI" },
+  { name: "DANIEL SEGUNDO CHOURIO CHOURIO", cedula: "9754526", gerencia: "DSI" },
+  { name: "JOSE LUIS MUÑOZ COLINA", cedula: "9788086", gerencia: "DSI" },
+  { name: "MANUEL ANTONIO PEÑA VALERA", cedula: "9789361", gerencia: "DSI" },
+  { name: "DOMIEL KENT ARIAS GARCIA", cedula: "10414879", gerencia: "DSI" },
+  { name: "GRABIEL JOSE MONTIEL BERRIOS", cedula: "10416001", gerencia: "DSI" },
+  { name: "JOSE LUIS PADILLA LARREAL", cedula: "10450129", gerencia: "DSI" },
+  { name: "JOSE LUIS MUJICA ALVAREZ", cedula: "10725976", gerencia: "DSI" },
+  { name: "EDMUNDO JOSE RUIZ OJEDA", cedula: "10887357", gerencia: "DSI" },
+  { name: "EUGENIO DE JESUS PEREZ RAMIREZ", cedula: "11066877", gerencia: "DSI" },
+  { name: "FERNANDO ENRIQUE PAZ DIAZ", cedula: "11283763", gerencia: "DSI" },
+  { name: "ENDER JOSE REVILLA MORALES", cedula: "11298239", gerencia: "DSI" },
+  { name: "AIME JOSE GALLARDO URDANETA", cedula: "11389115", gerencia: "DSI" },
+  { name: "JUAN CARLOS OBERTO GIL", cedula: "11394257", gerencia: "DSI" },
+  { name: "RITTER ARTURO REY RINCON", cedula: "11861891", gerencia: "DSI" },
+  { name: "RIXIO JOSE ZAMBRANO UGLACIO", cedula: "11867258", gerencia: "DSI" },
+  { name: "ALCIDES TORRES", cedula: "11885168", gerencia: "DSI" },
+  { name: "MANUEL RAMON DELLAN PINEDA", cedula: "12216283", gerencia: "DSI" },
+  { name: "JAIME ALBERTO LOPEZ CONTRERAS", cedula: "12381082", gerencia: "DSI" },
+  { name: "WILLIAM ENRIQUE CAÑAS LOPEZ", cedula: "12440256", gerencia: "DSI" },
+  { name: "GERARDO RAMON ANTUNEZ BERMUDEZ", cedula: "12515563", gerencia: "DSI" },
+  { name: "LUIS ERNESTO MARTINEZ VERGARA", cedula: "12693795", gerencia: "DSI" },
+  { name: "LICMIR DEL CARMEN BLANCO AVILA", cedula: "12697004", gerencia: "DSI" },
+  { name: "PAUL ALEXANDER CORONADO ARAUJO", cedula: "12798935", gerencia: "DSI" },
+  { name: "EDUWI SEGUNDO AMAYA", cedula: "12868518", gerencia: "DSI" },
+  { name: "JUAN CARLOS HERNANDEZ RODRIGUEZ", cedula: "12871731", gerencia: "DSI" },
+  { name: "LUIS ARNOLDO GOMEZ MORA", cedula: "12872431", gerencia: "DSI" },
+  { name: "MATERAN CORDERO, WUILLIAM ANTONIO", cedula: "13001454", gerencia: "DSI" },
+  { name: "FERNANDO EZEQUIEL MENDOZA MORA", cedula: "13080910", gerencia: "DSI" },
+  { name: "FERNANDO JOSE URDANETA CASTELLANO", cedula: "13082088", gerencia: "DSI" },
+  { name: "LUIS MANUEL TERAN UZCATEGUI", cedula: "13205884", gerencia: "DSI" },
+  { name: "WUILMER MENDOZA", cedula: "13523786", gerencia: "DSI" },
+  { name: "DARWIN DARIO SIBIRA DIAZ", cedula: "13551231", gerencia: "DSI" },
+  { name: "ANTONIO JOSE PEÑA MARTINEZ", cedula: "13628631", gerencia: "DSI" },
+  { name: "DOUGLAS ENRIQUE VILLALOBOS BARRERA", cedula: "13661006", gerencia: "DSI" },
+  { name: "HENRY DAVID GONZALEZ URUETA", cedula: "13943420", gerencia: "DSI" },
+  { name: "MAYRA ALEJANDRA VARELA BRAVO", cedula: "14134276", gerencia: "DSI" },
+  { name: "MOISES ELIAS MORALES OLIVARES", cedula: "14150901", gerencia: "DSI" },
+  { name: "EDUARDO JOSE MORALES MORALES", cedula: "14360485", gerencia: "DSI" },
+  { name: "ANGELO DEIVIS FERRER SOTO", cedula: "14457223", gerencia: "DSI" },
+  { name: "RAFAEL ALFONSO RINCON VILLALOBOS", cedula: "14698598", gerencia: "DSI" },
+  { name: "AUDOMARIO JOSE GARCIA RIVERO", cedula: "14723834", gerencia: "DSI" },
+  { name: "HENRY OMAR MESTRE MENDEZ", cedula: "15053207", gerencia: "DSI" },
+  { name: "DAYANNA YASMIN RUIZ BLANCO", cedula: "15058154", gerencia: "DSI" },
+  { name: "KENNERT ANTONIO GARCIA PORTILLO", cedula: "15552200", gerencia: "DSI" },
+  { name: "OMAR JOSE MORAN LOPEZ", cedula: "16107972", gerencia: "DSI" },
+  { name: "JUNA CARLOS ORTEGA AGUILAR", cedula: "16213667", gerencia: "DSI" },
+  { name: "JOHAN ENRIQUE FINOL CEPEDA", cedula: "16365866", gerencia: "DSI" },
+  { name: "CARLOS MANUEL GOMEZ ALTUVE", cedula: "16652902", gerencia: "DSI" },
+  { name: "DANILO JOSE CARRIZO NIEVES", cedula: "16823646", gerencia: "DSI" },
+  { name: "ALVER ENRIQUE FRANCO", cedula: "16919739", gerencia: "DSI" },
+  { name: "ROBERTO LUIS DOMINGUEZ MANZANILLA", cedula: "17188160", gerencia: "DSI" },
+  { name: "GUSTAVO ADOLFO SOTO RANGEL", cedula: "17327669", gerencia: "DSI" },
+  { name: "JESUS ANGEL PADRON HERNANDEZ", cedula: "17336507", gerencia: "DSI" },
+  { name: "ANGEL BENITO HERNANDEZ SANDOVAL", cedula: "17635690", gerencia: "DSI" },
+  { name: "JUAN CARLOS ESCALONA ROMAN", cedula: "17858752", gerencia: "DSI" },
+  { name: "EZEQUIEL ANTONIO MENDOZA MORA", cedula: "17916099", gerencia: "DSI" },
+  { name: "RENNY ENRIQUE MORAN AVILA", cedula: "17940057", gerencia: "DSI" },
+  { name: "ALI JOSE GONZALEZ QUIBA", cedula: "18573488", gerencia: "DSI" },
+  { name: "EMANUELA ZULEIDA CULTRERA CANELON", cedula: "18732535", gerencia: "DSI" },
+  { name: "JOHN STEVE ALBORNOZ PIRELA", cedula: "19017005", gerencia: "DSI" },
+  { name: "REGULO ALI RINCON MARTINEZ", cedula: "19072220", gerencia: "DSI" },
+  { name: "GREJALROTH LHERIK PINEDA VIDAL", cedula: "19547689", gerencia: "DSI" },
+  { name: "RAFAEL ANTONIO LEAL JIMENEZ", cedula: "19938637", gerencia: "DSI" },
+  { name: "ALI ALFONSO SANCHEZ COLINA", cedula: "19987557", gerencia: "DSI" },
+  { name: "JESUS ALBERTO FUENMAYOR URDANETA", cedula: "20280346", gerencia: "DSI" },
+  { name: "JOSE GABRIEL CASTRO NAVA", cedula: "20428995", gerencia: "DSI" },
+  { name: "LEONARDO MIJAIL ESCALONA ROMAN", cedula: "21126172", gerencia: "DSI" },
+  { name: "ANTHONY DANIEL RAMIREZ BOSCAN", cedula: "22056335", gerencia: "DSI" },
+  { name: "JUAN CARLOS POMANERES POMANERES", cedula: "22069439", gerencia: "DSI" },
+  { name: "MERVIN JOSE VILLEGAS MONTIEL", cedula: "22140310", gerencia: "DSI" },
+  { name: "FRANKLIN JOSE AGUILAR RIOS", cedula: "23764150", gerencia: "DSI" },
+  { name: "ANGEL ENRIQUE SOTO GUTIERREZ", cedula: "27418263", gerencia: "DSI" },
+  { name: "GABRIEL DE JESUS ACOSTA LEON", cedula: "28483989", gerencia: "DSI" },
+  { name: "ARIAS DE JAIMES JOANNA CHIQUIN", cedula: "16081976", gerencia: "DSI" },
+  { name: "CAMARILLO RONDON JOEL JOSE", cedula: "16149666", gerencia: "DSI" },
+  { name: "ARTEAGA RODRIGUEZ LEANDRO ALBERTO", cedula: "10449049", gerencia: "DSI" },
+
   { name: "ONEIDA JANETH LEON MONTES DE OCA", cedula: "10806897", gerencia: "ESTUDIOS INTEGRADOS" },
-  { name: "GIL MARIA ELENA", cedula: "17393371", gerencia: "PLANIFICACION" }
+  { name: "PETER LOUIS PIERRE VARGAS", cedula: "13024874", gerencia: "ESTUDIOS INTEGRADOS" },
+  { name: "SABRINA DEL CARMEN MARIN GOITIA", cedula: "13879046", gerencia: "ESTUDIOS INTEGRADOS" },
+  { name: "EDGAR JOSE COLINA ARIAS", cedula: "14496235", gerencia: "ESTUDIOS INTEGRADOS" },
+  { name: "HEBERT DE JESUS MEDINA GONZALEZ", cedula: "14896041", gerencia: "ESTUDIOS INTEGRADOS" },
+  { name: "NOLCRY JOSE VALERA ROSALES", cedula: "15407603", gerencia: "ESTUDIOS INTEGRADOS" }
 ];
 
 export const generateDefaultPassengers = async (): Promise<Passenger[]> => {
   const { generateQRCode, QRData } = await import('./qr');
   const passengers: Passenger[] = [];
-  
+
   for (let i = 0; i < defaultPassengersData.length; i++) {
     const passengerData = defaultPassengersData[i];
-    
     try {
       const qrData: QRData = {
         cedula: passengerData.cedula,
         name: passengerData.name,
         gerencia: passengerData.gerencia,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-      
       const qrCode = await generateQRCode(qrData);
-      
-      const passenger: Passenger = {
+      passengers.push({
         id: (Date.now() + i).toString(),
         name: passengerData.name,
         cedula: passengerData.cedula,
         gerencia: passengerData.gerencia,
         qrCode,
-        createdAt: new Date().toISOString()
-      };
-      
-      passengers.push(passenger);
+        createdAt: new Date().toISOString(),
+      });
     } catch (error) {
       console.error(`Error generando QR para ${passengerData.name}:`, error);
     }
   }
-  
   return passengers;
 };
