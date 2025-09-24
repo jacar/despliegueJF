@@ -1,8 +1,23 @@
 [build]
-  publish = "dist"
   command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
 
+[functions]
+  external_node_modules = []
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# ⬇️ Esta regla va primero: expone las Functions
+[[redirects]]
+  from = "/.netlify/functions/*"
+  to   = "/.netlify/functions/:splat"
+  status = 200
+  force = true
+
+# ⬇️ Esta después: SPA
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to   = "/index.html"
   status = 200
